@@ -33,7 +33,7 @@
 #include "mapcache.h"
 
 
-static int mapcache_auth_command_line(mapcache_context *ctx, mapcache_tileset *tileset, mapcache_auth_method *auth_method, char *user);
+static int mapcache_auth_command_line(mapcache_context *ctx, mapcache_tileset *tileset, mapcache_auth_method *auth_method, const char *user);
 
 void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcache_request *request, apr_table_t *headers) {
   int ntilesets = 0, i;
@@ -87,8 +87,8 @@ void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcach
       /* actually invoke the auth method */
       int status = MAPCACHE_FAILURE;
       mapcache_auth_method *auth_method = tileset->auth_method;
-      char *user = apr_table_get(headers, auth_method->user_header);
-      char *mc_key;
+      const char *user = apr_table_get(headers, auth_method->user_header);
+      /*char *mc_key;*/
 
       if (!user) {
         ctx->set_error(ctx, 403, "Required user-header field '%s' not set.", auth_method->user_header);
@@ -135,7 +135,7 @@ void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcach
 }
 
 
-static int mapcache_auth_command_line(mapcache_context *ctx, mapcache_tileset *tileset, mapcache_auth_method *auth_method, char *user) {
+static int mapcache_auth_command_line(mapcache_context *ctx, mapcache_tileset *tileset, mapcache_auth_method *auth_method, const char *user) {
   mapcache_auth_method_cmd *auth_method_cmd = (mapcache_auth_method_cmd*)auth_method;
   
   char * command = auth_method_cmd->template;
@@ -155,5 +155,5 @@ static int mapcache_auth_command_line(mapcache_context *ctx, mapcache_tileset *t
 mapcache_auth_method *mapcache_auth_method_command_line_create(mapcache_context *ctx) {
   mapcache_auth_method_cmd *auth_method_cmd = apr_pcalloc(ctx->pool, sizeof(mapcache_auth_method_cmd));
   auth_method_cmd->auth_method.type = MAPCACHE_AUTH_METHOD_COMMAND;
-  return auth_method_cmd;
+  return (mapcache_auth_method *)auth_method_cmd;
 }

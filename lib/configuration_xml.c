@@ -941,9 +941,7 @@ void parseAuthMethod(mapcache_context *ctx, ezxml_t root, mapcache_cfg *config) 
       ctx->set_error(ctx, 400, "Missing mandatory element <template/> in the <auth_method/> tag.");
       return;
     }
-    else {
-      ((mapcache_auth_method_cmd*) auth_method)->template = apr_pstrdup(ctx->pool, node->txt);
-    }
+    ((mapcache_auth_method_cmd*) auth_method)->template = apr_pstrdup(ctx->pool, node->txt);
   }
   else {
     ctx->set_error(ctx, 400, "Invalid <auth_method/> type '%s'.", attr);

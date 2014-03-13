@@ -162,6 +162,7 @@ mapcache_cfg* mapcache_configuration_create(apr_pool_t *pool)
   cfg->grids = apr_hash_make(pool);
   cfg->image_formats = apr_hash_make(pool);
   cfg->metadata = apr_table_make(pool,3);
+  cfg->auth_methods = apr_hash_make(pool);
 
   mapcache_configuration_add_image_format(cfg,
           mapcache_imageio_create_png_format(pool,"PNG",MAPCACHE_COMPRESSION_FAST),
