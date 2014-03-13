@@ -33,12 +33,14 @@
 #include "mapcache.h"
 
 
-void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcache_request *request, apr_table_t *headers)
-{
+static int mapcache_auth_command_line(mapcache_context *ctx, mapcache_tileset *tileset, mapcache_auth_method *auth_method, char *user);
+
+void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcache_request *request, apr_table_t *headers) {
   int ntilesets = 0, i;
   mapcache_tileset **tilesets = NULL;
 
-  if (!config->use_auth) return;
+  /* TODO: implement
+  if (!config->use_auth) return;*/
 
   switch(request->type) {
     case MAPCACHE_REQUEST_GET_CAPABILITIES:
@@ -46,9 +48,13 @@ void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcach
       break;
 
     case MAPCACHE_REQUEST_GET_TILE: {
-      tilesets = apr_pcalloc(ctx->pool, sizeof(mapcache_tileset*));
-      tilesets[0] = ((mapcache_request_get_tile*)request)->tileset;
-      ntilesets = 1;
+      int i;
+      mapcache_request_get_tile *request_get_tile = (mapcache_request_get_tile*)request;
+      ntilesets = request_get_tile->ntiles;
+      tilesets = apr_pcalloc(ctx->pool, ntilesets * sizeof(mapcache_tileset*));
+      for(i=0; i < ntilesets; ++i) {
+        tilesets[i] = request_get_tile->tiles[i]->tileset;
+      }
       break;
     }
     case MAPCACHE_REQUEST_GET_MAP: {
@@ -62,6 +68,7 @@ void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcach
       break;
     }
     case MAPCACHE_REQUEST_GET_FEATUREINFO: {
+      /**/
     }
     default:
       ctx->set_error(ctx,500,"###BUG### unknown request type");
@@ -88,29 +95,29 @@ void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcach
         return;
       }
 
-      if (auth_method->memcache) {
+
+      /* get a cache auth result */
+      /*if (auth_method->memcache) {
         char *data;
         apr_size_t size;
         apr_status_t mc_status;
 
         mc_key = apr_pmalloc(ctx->pool, sizeof("auth//") + strlen(user) + strlen(tileset->name));
-        /* construct the key and lookup the memcache */
         snprintf(key, strlen(mc_key), "auth/%s/%s", tileset->name, user);
         mc_status = apr_memcache_getp(auth_method->memcache, ctx->pool, key, &data, &size, 0):
 
         if (mc_status == APR_SUCCESS && data != NULL && strncmp(data, "TRUE", 4) == 0) {
-          /* found a cached value, which was also "TRUE", thus we can jump over the PDP check */
           continue;
         }
         else if (mc_status == APR_SUCCESS && data != NULL && strncmp(data, "FALSE", 5) == 0) {
           ctx->set_error(ctx, 403, "Authorization failed.");
           return;
         }
-      }
+      }*/
 
       /* PDP invocation methods*/
       if (auth_method->type == MAPCACHE_AUTH_METHOD_COMMAND) {
-        status = mapcache_auth_command_line(ctx, tileset, auth_method);
+        status = mapcache_auth_command_line(ctx, tileset, auth_method, user);
       }
       /* TODO: other auth methods */
 
@@ -118,17 +125,17 @@ void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcach
         ctx->set_error(ctx, 403, "Authorization failed.");
       }
 
-      if (auth_method->memcache) {
-        /* construct the key and lookup the memcache */
+      /* store the result in the auth cache */
+      /*if (auth_method->memcache) {
         char *value = (status ? "TRUE" : "FALSE");
         apr_memcache_set(auth_method->memcache, mc_key, value, strlen(value), auth_method->memcache_timeout, 0):
-      }
+      }*/
     }
   }
 }
 
 
-static int mapcache_auth_command_line(mapcache_context *ctx, mapcache_tileset *tileset, mapcache_auth_method *auth_method) {
+static int mapcache_auth_command_line(mapcache_context *ctx, mapcache_tileset *tileset, mapcache_auth_method *auth_method, char *user) {
   mapcache_auth_method_cmd *auth_method_cmd = (mapcache_auth_method_cmd*)auth_method;
   
   char * command = auth_method_cmd->template;
@@ -143,7 +150,6 @@ static int mapcache_auth_command_line(mapcache_context *ctx, mapcache_tileset *t
   }
   return MAPCACHE_SUCCESS;
 }
-
 
 
 mapcache_auth_method *mapcache_auth_method_command_line_create(mapcache_context *ctx) {

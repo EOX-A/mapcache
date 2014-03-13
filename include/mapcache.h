@@ -143,6 +143,7 @@ typedef struct mapcache_dimension_regex mapcache_dimension_regex;
 typedef struct mapcache_extent mapcache_extent;
 typedef struct mapcache_extent_i mapcache_extent_i;
 typedef struct mapcache_auth_method mapcache_auth_method;
+typedef struct mapcache_auth_method_cmd mapcache_auth_method_cmd;
 
 /** \defgroup utility Utility */
 /** @{ */
@@ -1297,6 +1298,12 @@ struct mapcache_tileset {
    */
   mapcache_cfg *config;
 
+  /**
+   * the associated auth method of this tileset
+   */
+
+  mapcache_auth_method *auth_method;
+
   apr_table_t *metadata;
 };
 
@@ -1763,11 +1770,28 @@ struct mapcache_timedimension_sqlite {
 mapcache_timedimension* mapcache_timedimension_sqlite_create(apr_pool_t *pool);
 #endif
 
+
+typedef enum {
+  MAPCACHE_AUTH_METHOD_COMMAND
+} mapcache_auth_method_type;
+
 struct mapcache_auth_method {
-  char *template;
+  mapcache_auth_method_type type;
   char *user_header;
-  apr_memcache_t auth_memcache;
+  /*apr_memcache_t *auth_memcache;*/
 };
+
+struct mapcache_auth_method_cmd {
+  mapcache_auth_method auth_method;
+  char *template;
+};
+
+void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcache_request *request, apr_table_t *headers);
+
+mapcache_auth_method *mapcache_auth_method_command_line_create(mapcache_context *ctx);
+
+mapcache_auth_method *mapcache_configuration_get_auth_method(mapcache_cfg *config, const char *key);
+void mapcache_configuration_add_auth_method(mapcache_cfg *config, mapcache_auth_method *auth, const char * key);
 
 int mapcache_is_axis_inverted(const char *srs);
 

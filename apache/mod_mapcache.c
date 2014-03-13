@@ -289,7 +289,7 @@ static int mod_mapcache_request_handler(request_rec *r)
 
 
   /* implement authorization here */
-  mapcache_auth(global_ctx, &request);
+  mapcache_authorization(global_ctx, global_ctx->config, request, r->headers_in);
   if(GC_HAS_ERROR(global_ctx)) {
     return write_http_response(apache_ctx,
                                mapcache_core_respond_to_error(global_ctx));

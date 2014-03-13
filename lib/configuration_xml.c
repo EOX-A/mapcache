@@ -850,7 +850,7 @@ void parseTileset(mapcache_context *ctx, ezxml_t node, mapcache_cfg *config)
 
   /* auth here */
   if ((cur_node = ezxml_child(node,"auth_method")) != NULL) {
-    mapcache_auth_method *auth_method = mapcache_configuration_get_auth(config,cur_node->txt);
+    mapcache_auth_method *auth_method = mapcache_configuration_get_auth_method(config,cur_node->txt);
     if(!auth_method) {
       ctx->set_error(ctx, 400, "tileset \"%s\" references auth_method \"%s\","
                      " but it is not configured",name,cur_node->txt);
@@ -923,33 +923,31 @@ void parseServices(mapcache_context *ctx, ezxml_t root, mapcache_cfg *config)
 
 void parseAuthMethod(mapcache_context *ctx, ezxml_t root, mapcache_cfg *config) {
   ezxml_t node;
-  char *attr, *name, *type;
+  char *attr, *name;
   mapcache_auth_method *auth_method;
 
-  if ((name = ezxml_attr(root, "name")) == NULL) {
+  if ((name = (char*)ezxml_attr(root, "name")) == NULL) {
     ctx->set_error(ctx, 400, "Missing mandatory attribute 'name' in the <auth_method/> tag.");
     return;
   }
 
-  if ((attr = ezxml_attr(root, "type")) == NULL) {
+  if ((attr = (char*)ezxml_attr(root, "type")) == NULL) {
     attr = "cmd";
   }
 
   if (strcmp(attr, "cmd") == 0) {
     auth_method = mapcache_auth_method_command_line_create(ctx);
+    if ((node = ezxml_child(root, "template")) == NULL) {
+      ctx->set_error(ctx, 400, "Missing mandatory element <template/> in the <auth_method/> tag.");
+      return;
+    }
+    else {
+      ((mapcache_auth_method_cmd*) auth_method)->template = apr_pstrdup(ctx->pool, node->txt);
+    }
   }
   else {
     ctx->set_error(ctx, 400, "Invalid <auth_method/> type '%s'.", attr);
     return;
-  }
-
-
-  if ((node = ezxml_child(root, "template")) == NULL) {
-    ctx->set_error(ctx, 400, "Missing mandatory element <template/> in the <auth_method/> tag.");
-    return;
-  }
-  else {
-    auth_method->template = apr_pstrdup(ctx->pool, node->txt);
   }
 
   if ((node = ezxml_child(root, "user_header")) != NULL) {
