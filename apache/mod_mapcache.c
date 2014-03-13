@@ -284,6 +284,20 @@ static int mod_mapcache_request_handler(request_rec *r)
                                mapcache_core_respond_to_error(global_ctx));
   }
 
+
+  /**************** BEGIN AUTH */
+
+
+  /* implement authorization here */
+  mapcache_auth(global_ctx, &request);
+  if(GC_HAS_ERROR(global_ctx)) {
+    return write_http_response(apache_ctx,
+                               mapcache_core_respond_to_error(global_ctx));
+  }
+
+  /**************** END AUTH */
+
+
   if(request->type == MAPCACHE_REQUEST_GET_CAPABILITIES) {
     mapcache_request_get_capabilities *req_caps = (mapcache_request_get_capabilities*)request;
     request_rec *original;
