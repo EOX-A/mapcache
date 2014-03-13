@@ -142,6 +142,7 @@ typedef struct mapcache_dimension_values mapcache_dimension_values;
 typedef struct mapcache_dimension_regex mapcache_dimension_regex;
 typedef struct mapcache_extent mapcache_extent;
 typedef struct mapcache_extent_i mapcache_extent_i;
+typedef struct mapcache_auth_method mapcache_auth_method;
 
 /** \defgroup utility Utility */
 /** @{ */
@@ -991,6 +992,11 @@ struct mapcache_cfg {
   apr_hash_t *grids;
 
   /**
+   * hashtable containing configured mapcache_auth_method%s
+   */
+  apr_hash_t *auth_methods;
+
+  /**
    * the format to use for some miscelaneaous operations:
    *  - creating an empty image
    *  - creating an error image
@@ -1756,6 +1762,12 @@ struct mapcache_timedimension_sqlite {
 };
 mapcache_timedimension* mapcache_timedimension_sqlite_create(apr_pool_t *pool);
 #endif
+
+struct mapcache_auth_method {
+  char *template;
+  char *user_header;
+  apr_memcache_t auth_memcache;
+};
 
 int mapcache_is_axis_inverted(const char *srs);
 
