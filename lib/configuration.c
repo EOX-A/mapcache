@@ -292,6 +292,11 @@ mapcache_image_format *mapcache_configuration_get_image_format(mapcache_cfg *con
   return (mapcache_image_format*)apr_hash_get(config->image_formats, (void*)key, APR_HASH_KEY_STRING);
 }
 
+mapcache_auth_method *mapcache_configuration_get_auth_method(mapcache_cfg *config, const char *key)
+{
+  return (mapcache_auth_method*)apr_hash_get(config->auth_methods, (void*)key, APR_HASH_KEY_STRING);
+}
+
 void mapcache_configuration_add_source(mapcache_cfg *config, mapcache_source *source, const char * key)
 {
   apr_hash_set(config->sources, key, APR_HASH_KEY_STRING, (void*)source);
@@ -316,4 +321,9 @@ void mapcache_configuration_add_cache(mapcache_cfg *config, mapcache_cache *cach
 void mapcache_configuration_add_image_format(mapcache_cfg *config, mapcache_image_format *format, const char * key)
 {
   apr_hash_set(config->image_formats, key, APR_HASH_KEY_STRING, (void*)format);
+}
+
+void mapcache_configuration_add_auth_method(mapcache_cfg *config, mapcache_auth_method *auth, const char * key)
+{
+  apr_hash_set(config->auth_methods, key, APR_HASH_KEY_STRING, (void*)auth);
 }

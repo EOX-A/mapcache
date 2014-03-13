@@ -487,6 +487,7 @@ mapcache_tileset* mapcache_tileset_create(mapcache_context *ctx)
   tileset->format = NULL;
   tileset->grid_links = NULL;
   tileset->config = NULL;
+  tileset->auth_method = NULL;
   return tileset;
 }
 
