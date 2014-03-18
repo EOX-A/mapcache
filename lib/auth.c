@@ -103,7 +103,6 @@ void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcach
         return;
       }
 
-
       if (auth_method->auth_cache) {
         mapcache_auth_cache_lookup_type lookup;
         lookup = auth_method->auth_cache->lookup_func(ctx, auth_method->auth_cache, tileset, user);
@@ -261,7 +260,8 @@ mapcache_auth_cache_lookup_type mapcache_autch_cache_memcache_lookup(mapcache_co
 void mapcache_autch_cache_memcache_store(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user, int status) {
   apr_size_t size = sizeof("auth//") + strlen(user) + strlen(tileset->name);
   char *key = apr_pcalloc(ctx->pool, size);
-  char *value = ((status) ? "TRUE" : "FALSE");
+  char *value = ((status == MAPCACHE_SUCCESS) ? "TRUE" : "FALSE");
+  snprintf(key, size, "auth/%s/%s", tileset->name, user);
   apr_memcache_set(((mapcache_auth_cache_memcache *)auth_cache)->auth_memcache, key, value, strlen(value), auth_cache->expires, 0);
 }
 
