@@ -144,6 +144,8 @@ typedef struct mapcache_extent mapcache_extent;
 typedef struct mapcache_extent_i mapcache_extent_i;
 typedef struct mapcache_auth_method mapcache_auth_method;
 typedef struct mapcache_auth_method_cmd mapcache_auth_method_cmd;
+typedef struct mapcache_auth_cache mapcache_auth_cache;
+typedef struct mapcache_auth_cache_memcache mapcache_auth_cache_memcache;
 
 /** \defgroup utility Utility */
 /** @{ */
@@ -1777,8 +1779,8 @@ typedef enum {
 
 struct mapcache_auth_method {
   mapcache_auth_method_type type;
+  mapcache_auth_cache *auth_cache;
   char *user_header;
-  /*apr_memcache_t *auth_memcache;*/
 };
 
 struct mapcache_auth_method_cmd {
@@ -1786,8 +1788,36 @@ struct mapcache_auth_method_cmd {
   char *template;
 };
 
-void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcache_request *request, apr_table_t *headers);
+/* Auth cache */
 
+typedef enum {
+  MAPCACHE_AUTH_CACHE_MEMCACHE
+} mapcache_auth_cache_type;
+
+typedef enum {
+  MAPCACHE_AUTH_CACHE_AUTHORIZED, MAPCACHE_AUTH_CACHE_NOT_AUTHORIZED,
+  MAPCACHE_AUTH_CACHE_UNKNOWN
+} mapcache_auth_cache_lookup_type;
+
+struct mapcache_auth_cache {
+  mapcache_auth_cache_type type;
+  int expires;
+  mapcache_auth_cache_lookup_type (*lookup_func)(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user);
+  void (*store_func)(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user, int value);
+};
+
+#if USE_MEMCACHE
+
+struct mapcache_auth_cache_memcache {
+  mapcache_auth_cache auth_cache;
+  apr_memcache_t *auth_memcache;
+};
+
+mapcache_auth_cache *mapcache_auth_cache_memcache_create(mapcache_context *ctx, ezxml_t node);
+
+#endif /* USE_MEMCACHE */
+
+void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcache_request *request, apr_table_t *headers);
 mapcache_auth_method *mapcache_auth_method_command_line_create(mapcache_context *ctx);
 
 mapcache_auth_method *mapcache_configuration_get_auth_method(mapcache_cfg *config, const char *key);

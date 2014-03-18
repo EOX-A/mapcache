@@ -287,7 +287,6 @@ static int mod_mapcache_request_handler(request_rec *r)
 
   /**************** BEGIN AUTH */
 
-
   /* implement authorization here */
   mapcache_authorization(global_ctx, global_ctx->config, request, r->headers_in);
   if(GC_HAS_ERROR(global_ctx)) {

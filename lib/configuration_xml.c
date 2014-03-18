@@ -956,7 +956,23 @@ void parseAuthMethod(mapcache_context *ctx, ezxml_t root, mapcache_cfg *config) 
   }
 
   if ((node = ezxml_child(root, "auth_cache")) != NULL) {
-    /* TODO: implement */
+    if ((attr = (char*)ezxml_attr(node, "type")) == NULL) {
+      ctx->set_error(ctx, 400, "Missing mandatory attribute 'type' in the <auth_cache/> tag.");
+      return;
+    }
+
+#if USE_MEMCACHE
+
+    if (strcmp(attr, "memcache") == 0) {
+      auth_method->auth_cache = mapcache_auth_cache_memcache_create(ctx, node);
+    }
+#else
+    if (0) {}
+#endif /* USE_MEMCACHE */
+    else {
+      ctx->set_error(ctx, 400, "Invalid <auth_cache/> type '%s'.", attr);
+      return;
+    }
   }
 
   mapcache_configuration_add_auth_method(config, auth_method, name);
