@@ -39,6 +39,7 @@
 #include <apr_strings.h>
 #include <apr_time.h>
 #include <http_log.h>
+#include <time.h>
 #include "mapcache.h"
 #ifdef APR_HAS_THREADS
 #include <apr_thread_mutex.h>
@@ -265,6 +266,9 @@ static int mod_mapcache_request_handler(request_rec *r)
   mapcache_http_response *http_response = NULL;
   mapcache_context *global_ctx =  NULL;
 
+  float auth_time, proc_time;
+  clock_t auth_clock, proc_clock;
+
   if (!r->handler || strcmp(r->handler, "mapcache")) {
     return DECLINED;
   }
@@ -275,6 +279,8 @@ static int mod_mapcache_request_handler(request_rec *r)
 
   apache_ctx = apache_request_context_create(r);
   global_ctx = (mapcache_context*)apache_ctx;
+
+  proc_clock = clock();
 
   params = mapcache_http_parse_param_string(global_ctx, r->args);
 
@@ -288,11 +294,15 @@ static int mod_mapcache_request_handler(request_rec *r)
   /**************** BEGIN AUTH */
 
   /* implement authorization here */
+  auth_clock = clock();
   mapcache_authorization(global_ctx, global_ctx->config, request, r->headers_in);
   if(GC_HAS_ERROR(global_ctx)) {
     return write_http_response(apache_ctx,
                                mapcache_core_respond_to_error(global_ctx));
   }
+  auth_time = ((float)(clock() - auth_clock)) / CLOCKS_PER_SEC;
+
+
 
   /**************** END AUTH */
 
@@ -328,12 +338,21 @@ static int mod_mapcache_request_handler(request_rec *r)
   } else if( request->type == MAPCACHE_REQUEST_GET_TILE) {
     mapcache_request_get_tile *req_tile = (mapcache_request_get_tile*)request;
     http_response = mapcache_core_get_tile(global_ctx,req_tile);
+
+    mapcache_extent extent;
+    mapcache_tile *tile = req_tile->tiles[0];
+    mapcache_grid_get_extent(ctx,tile->grid_link->grid,tile->x,tile->y,tile->z,&extent);
+    proc_time = ((float)(clock() - proc_clock)) / CLOCKS_PER_SEC;
+
+    global_ctx->log(global_ctx, MAPCACHE_NOTICE, "service:WMTS layers", )
+
   } else if( request->type == MAPCACHE_REQUEST_PROXY ) {
     mapcache_request_proxy *req_proxy = (mapcache_request_proxy*)request;
     http_response = mapcache_core_proxy_request(global_ctx, req_proxy);
   } else if( request->type == MAPCACHE_REQUEST_GET_MAP) {
     mapcache_request_get_map *req_map = (mapcache_request_get_map*)request;
     http_response = mapcache_core_get_map(global_ctx,req_map);
+    proc_time = ((float)(clock() - proc_clock)) / CLOCKS_PER_SEC;
   } else if( request->type == MAPCACHE_REQUEST_GET_FEATUREINFO) {
     mapcache_request_get_feature_info *req_fi = (mapcache_request_get_feature_info*)request;
     http_response = mapcache_core_get_featureinfo(global_ctx,req_fi);
