@@ -55,6 +55,10 @@ void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcach
       /* capabilities not tied to a tileset, therefore no auth */
       break;
 
+    case MAPCACHE_REQUEST_PROXY:
+      /* proxy not tied to a tileset, therefore no auth */
+      break;
+
     case MAPCACHE_REQUEST_GET_TILE: {
       int i;
       mapcache_request_get_tile *request_get_tile = (mapcache_request_get_tile*)request;
