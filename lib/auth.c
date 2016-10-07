@@ -33,22 +33,24 @@
 #include "mapcache.h"
 
 
-static int mapcache_auth_command_line(mapcache_context *ctx, mapcache_tileset *tileset, mapcache_auth_method *auth_method, const char *user);
+static int mapcache_auth_command_line(mapcache_context *ctx, mapcache_tileset *tileset, mapcache_auth_method *auth_method, const char *user, const char *time);
 
 #if USE_MEMCACHE
 
-mapcache_auth_cache_lookup_type mapcache_autch_cache_memcache_lookup(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user);
-void mapcache_autch_cache_memcache_store(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user, int value);
+mapcache_auth_cache_lookup_type mapcache_autch_cache_memcache_lookup(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user, const char *time);
+void mapcache_autch_cache_memcache_store(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user, const char *time, int value);
 
 #endif /* USE_MEMCACHE */
 
 
-void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcache_request *request, apr_table_t *headers) {
+void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcache_request *request, apr_table_t *headers, apr_table_t *params) {
   int ntilesets = 0, i;
   mapcache_tileset **tilesets = NULL;
 
   /* TODO: implement
   if (!config->use_auth) return;*/
+
+  const char *time = apr_table_get(params,"TIME");
 
   switch(request->type) {
     case MAPCACHE_REQUEST_GET_CAPABILITIES:
@@ -66,6 +68,9 @@ void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcach
       tilesets = apr_pcalloc(ctx->pool, ntilesets * sizeof(mapcache_tileset*));
       for(i=0; i < ntilesets; ++i) {
         tilesets[i] = request_get_tile->tiles[i]->tileset;
+      }
+      if (!time) {
+        time = request_get_tile->timedim;
       }
       break;
     }
@@ -107,9 +112,14 @@ void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcach
         return;
       }
 
+      if (!time) {
+        ctx->set_error(ctx, 403, "Required time parameter not found.");
+        return;
+      }
+
       if (auth_method->auth_cache) {
         mapcache_auth_cache_lookup_type lookup;
-        lookup = auth_method->auth_cache->lookup_func(ctx, auth_method->auth_cache, tileset, user);
+        lookup = auth_method->auth_cache->lookup_func(ctx, auth_method->auth_cache, tileset, user, time);
         if (lookup == MAPCACHE_AUTH_CACHE_AUTHORIZED) {
           continue;
         }
@@ -121,7 +131,7 @@ void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcach
 
       /* PDP invocation methods*/
       if (auth_method->type == MAPCACHE_AUTH_METHOD_COMMAND) {
-        status = mapcache_auth_command_line(ctx, tileset, auth_method, user);
+        status = mapcache_auth_command_line(ctx, tileset, auth_method, user, time);
       }
       /* TODO: other auth methods */
 
@@ -130,19 +140,20 @@ void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcach
       }
 
       if (auth_method->auth_cache) {
-        auth_method->auth_cache->store_func(ctx, auth_method->auth_cache, tileset, user, status);
+        auth_method->auth_cache->store_func(ctx, auth_method->auth_cache, tileset, user, time, status);
       }
     }
   }
 }
 
 
-static int mapcache_auth_command_line(mapcache_context *ctx, mapcache_tileset *tileset, mapcache_auth_method *auth_method, const char *user) {
+static int mapcache_auth_command_line(mapcache_context *ctx, mapcache_tileset *tileset, mapcache_auth_method *auth_method, const char *user, const char *time) {
   mapcache_auth_method_cmd *auth_method_cmd = (mapcache_auth_method_cmd*)auth_method;
-  
+
   char * command = auth_method_cmd->template;
 
   command = mapcache_util_str_replace(ctx->pool, command, ":tileset", tileset->name);
+  command = mapcache_util_str_replace(ctx->pool, command, ":time", time);
   command = mapcache_util_str_replace(ctx->pool, command, ":user", user);
 
   int ret_val = system(command);
@@ -240,12 +251,12 @@ mapcache_auth_cache *mapcache_auth_cache_memcache_create(mapcache_context *ctx, 
 }
 
 
-mapcache_auth_cache_lookup_type mapcache_autch_cache_memcache_lookup(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user) {
+mapcache_auth_cache_lookup_type mapcache_autch_cache_memcache_lookup(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user, const char *time) {
   char *data;
-  apr_size_t size = sizeof("auth//") + strlen(user) + strlen(tileset->name);
+  apr_size_t size = sizeof("auth///") + strlen(user) + strlen(tileset->name) + strlen(time);
   apr_status_t status;
   char *key = apr_pcalloc(ctx->pool, size);
-  snprintf(key, size, "auth/%s/%s", tileset->name, user);
+  snprintf(key, size, "auth/%s/%s/%s", tileset->name, user, time);
   status = apr_memcache_getp(((mapcache_auth_cache_memcache*)auth_cache)->auth_memcache, ctx->pool, key, &data, &size, 0);
 
   if (status == APR_SUCCESS && data != NULL) {
@@ -261,11 +272,11 @@ mapcache_auth_cache_lookup_type mapcache_autch_cache_memcache_lookup(mapcache_co
   }
 }
 
-void mapcache_autch_cache_memcache_store(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user, int status) {
-  apr_size_t size = sizeof("auth//") + strlen(user) + strlen(tileset->name);
+void mapcache_autch_cache_memcache_store(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user, const char *time, int status) {
+  apr_size_t size = sizeof("auth///") + strlen(user) + strlen(tileset->name) + strlen(time);
   char *key = apr_pcalloc(ctx->pool, size);
   char *value = ((status == MAPCACHE_SUCCESS) ? "TRUE" : "FALSE");
-  snprintf(key, size, "auth/%s/%s", tileset->name, user);
+  snprintf(key, size, "auth/%s/%s/%s", tileset->name, user, time);
   apr_memcache_set(((mapcache_auth_cache_memcache *)auth_cache)->auth_memcache, key, value, strlen(value), auth_cache->expires, 0);
 }
 

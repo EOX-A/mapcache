@@ -561,6 +561,12 @@ struct mapcache_request_get_tile {
    * before being returned to the client
    */
   int ntiles;
+
+  /**
+   * the requested value of the time dimension
+   */
+  char *timedim;
+
   mapcache_image_format *format;
 
 };
@@ -1209,7 +1215,7 @@ struct mapcache_grid_link {
   mapcache_extent *restricted_extent;
   mapcache_extent_i *grid_limits;
   int minz,maxz;
-  
+
   /**
    * tiles above this zoom level will not be stored to the cache, but will be
    * dynamically generated (either by reconstructing from lower level tiles, or
@@ -1756,7 +1762,7 @@ apr_array_header_t* mapcache_timedimension_get_entries_for_value(mapcache_contex
 struct mapcache_timedimension {
   mapcache_timedimension_assembly_type assembly_type;
   void (*configuration_parse_xml)(mapcache_context *context, mapcache_timedimension *dim, ezxml_t node);
-  apr_array_header_t* (*get_entries_for_interval)(mapcache_context *ctx, mapcache_timedimension *dim, mapcache_tileset *tileset, 
+  apr_array_header_t* (*get_entries_for_interval)(mapcache_context *ctx, mapcache_timedimension *dim, mapcache_tileset *tileset,
         mapcache_grid *grid, mapcache_extent *extent, time_t start, time_t end);
   apr_array_header_t* (*get_all_entries)(mapcache_context *ctx, mapcache_timedimension *dim, mapcache_tileset *tileset);
   char *default_value;
@@ -1803,8 +1809,8 @@ typedef enum {
 struct mapcache_auth_cache {
   mapcache_auth_cache_type type;
   int expires;
-  mapcache_auth_cache_lookup_type (*lookup_func)(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user);
-  void (*store_func)(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user, int value);
+  mapcache_auth_cache_lookup_type (*lookup_func)(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user, const char *time);
+  void (*store_func)(mapcache_context *ctx, mapcache_auth_cache *auth_cache, mapcache_tileset *tileset, const char *user, const char *time, int value);
 };
 
 #if USE_MEMCACHE
@@ -1818,7 +1824,7 @@ mapcache_auth_cache *mapcache_auth_cache_memcache_create(mapcache_context *ctx, 
 
 #endif /* USE_MEMCACHE */
 
-void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcache_request *request, apr_table_t *headers);
+void mapcache_authorization(mapcache_context *ctx, mapcache_cfg *config, mapcache_request *request, apr_table_t *headers, apr_table_t *params);
 mapcache_auth_method *mapcache_auth_method_command_line_create(mapcache_context *ctx);
 
 mapcache_auth_method *mapcache_configuration_get_auth_method(mapcache_cfg *config, const char *key);
