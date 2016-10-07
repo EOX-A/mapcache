@@ -133,7 +133,7 @@ static ezxml_t _wmts_inspire_metadata(mapcache_context *ctx, mapcache_cfg *cfg)
   value = apr_table_get(cfg->metadata, "inspire_metadataurl");
   if(value)
     ezxml_set_txt(metadataurl, value);
- 
+
   metadatatype = ezxml_add_child(metadata, "inspire_common:MediaType", 0);
   ezxml_set_txt(metadatatype, "application/vnd.iso.19139+xml");
 
@@ -181,13 +181,13 @@ static ezxml_t _wmts_service_contactinfo(mapcache_context *ctx, mapcache_cfg *cf
   ezxml_t nodeInfo = ezxml_new("ows:ContactInfo");
   ezxml_t nodePhone = ezxml_new("ows:Phone");
 
-  value = apr_table_get(cfg->metadata,"contactphone"); 
+  value = apr_table_get(cfg->metadata,"contactphone");
   if(value) {
     addNode = 1;
     ezxml_set_txt(ezxml_add_child(nodePhone,"ows:Voice",0),value);
   }
 
-  value = apr_table_get(cfg->metadata,"contactfacsimile"); 
+  value = apr_table_get(cfg->metadata,"contactfacsimile");
   if(value) {
     addNode = 1;
     ezxml_set_txt(ezxml_add_child(nodePhone,"ows:Facsimile",0),value);
@@ -199,7 +199,7 @@ static ezxml_t _wmts_service_contactinfo(mapcache_context *ctx, mapcache_cfg *cf
 
   addNode = 0;
   nodeAddress = ezxml_new("ows:Address");
-  
+
   value = apr_table_get(cfg->metadata,"contactorganization");
   if(value) {
     addNode = 1;
@@ -912,7 +912,7 @@ void _mapcache_service_wmts_parse_request(mapcache_context *ctx, mapcache_servic
 
     mapcache_request_get_tile *req = (mapcache_request_get_tile*)apr_pcalloc(
                                        ctx->pool,sizeof(mapcache_request_get_tile));
-    
+
     req->request.type = MAPCACHE_REQUEST_GET_TILE;
     if(timedim) {
       timedim_selected = mapcache_timedimension_get_entries_for_value(ctx,
@@ -923,6 +923,7 @@ void _mapcache_service_wmts_parse_request(mapcache_context *ctx, mapcache_servic
         if(kvp) ctx->set_exception(ctx,"InvalidParameterValue","TIME");
         return;
       }
+      req->timedim = timedim;
       req->ntiles = timedim_selected->nelts;
     } else {
       req->ntiles = 1;
